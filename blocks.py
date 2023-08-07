@@ -12,7 +12,7 @@ class ModuleMixin:
             int: number of trainable parameters
         """
         return sum(
-            [curr.numel() for curr in self.parameters() if curr.requires_grad]
+            curr.numel() for curr in self.parameters() if curr.requires_grad
         )
 
     def get_param_shapes(self) -> Dict[str, torch.Size]:
@@ -56,3 +56,38 @@ class Block(nn.Sequential, ModuleMixin):
                 self.add_module(str(i_layer), nn.Dropout(dropout))
             elif layer_str == 'R':
                 self.add_module(str(i_layer), nn.ReLU())
+
+
+class AdaptiveHybridPool2d(nn.Module):
+    """Pooling layer that computes and combines adaptive avg & max pooling. """
+    def __init__(self,
+                 output_size: Union[int, Tuple[int, int]],
+                 cat: bool = False) -> None:
+        """Initialize pooling branches.
+
+        Args:
+            output_size (Union[int, Tuple[int, int]]): target output H/W
+            cat (bool): whether to concatenate or average branch outputs
+        """
+        super().__init__()
+        self.cat = cat
+        self.branches = nn.ModuleDict({
+            'avg': nn.AdaptiveAvgPool2d(output_size),
+            'max': nn.AdaptiveMaxPool2d(output_size)
+        })
+
+    def forward(self, inp: torch.Tensor) -> torch.Tensor:
+        """Compute and combine adaptive avg & max pooling.
+
+        Args:
+            inp (torch.Tensor): feature map to pool
+
+        Returns:
+            torch.Tensor: result of pooling
+        """
+        branch_outp = [branch(inp) for branch in self.branches.values()]
+        if self.cat:
+            outp = torch.cat(branch_outp, dim=1)
+        else:
+            outp = 0.5 * (branch_outp[0] + branch_outp[1])
+        return outp
