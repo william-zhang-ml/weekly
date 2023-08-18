@@ -11,7 +11,7 @@ def assert_siso_onnx_output_same(
     example_inp: torch.Tensor,
     num_trials: int = 10
 ) -> None:
-    """Test whether a model will produce same output if exported to ONNX.
+    """Test whether a model will produce the same output if exported to ONNX.
 
     Args:
         model (nn.Module): model of interest in eval mode
