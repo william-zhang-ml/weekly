@@ -70,6 +70,9 @@ if __name__ == '__main__':
     MNIST_PATH = CONFIG['mnist_path']
     NUM_EPOCH = CONFIG['num_epoch']
 
+    # extract optional config values
+    CHECKPOINT = CONFIG['checkpoint'] if 'checkpoint' in CONFIG else None
+
     # initialize training variables
     dataset = MNIST(MNIST_PATH, transform=transforms.ToTensor())
     loader = DataLoader(
@@ -82,6 +85,15 @@ if __name__ == '__main__':
     optimizer = optim.AdamW(network.parameters())
     scheduler = optim.lr_scheduler.StepLR(optimizer, EPOCH_PER_CYCLE)
     curr_epoch, step = 0, 0
+
+    # load checkpoint and overwrite states
+    if CHECKPOINT is not None:
+        checkpoint = torch.load(CHECKPOINT)
+        network.load_state_dict(checkpoint['model'])
+        optimizer.load_state_dict(checkpoint['optimizer'])
+        scheduler.load_state_dict(checkpoint['scheduler'])
+        curr_epoch = checkpoint['epoch'] + 1
+        step = checkpoint['step'] + 1
 
     # train
     epochbar = \
@@ -105,6 +117,18 @@ if __name__ == '__main__':
             batchbar.close()
             break
         scheduler.step()
+
+        # save checkpoint
+        torch.save(
+            {
+                'epoch': i_epoch,
+                'step': step,
+                'model': network.state_dict(),
+                'optimizer': optimizer.state_dict(),
+                'scheduler': scheduler.state_dict()
+            },
+            OUTPUT_DIR / f'{i_epoch + 1:03d}.pt'
+        )
 
     # training teardown - make analysis products and write ONNX weights
     export_network(network, OUTPUT_DIR / 'final.onnx')
