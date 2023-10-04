@@ -3,9 +3,12 @@ from datetime import datetime
 import os
 from pathlib import Path
 import torch
-from torch import nn
+from torch import nn, optim
+from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
-from torchvision import models
+from torchvision import models, transforms
+from torchvision.datasets import MNIST
+from tqdm import tqdm
 import yaml
 
 
@@ -61,8 +64,48 @@ if __name__ == '__main__':
 
     # extract required config values
     ARCH_NAME = CONFIG['arch_name']
+    BATCH_SIZE = CONFIG['batch_size']
+    EPOCH_PER_CYCLE = CONFIG['epoch_per_cycle']
+    LABEL_SMOOTHING = CONFIG['label_smoothing']
+    MNIST_PATH = CONFIG['mnist_path']
+    NUM_EPOCH = CONFIG['num_epoch']
 
+    # initialize training variables
+    dataset = MNIST(MNIST_PATH, transform=transforms.ToTensor())
+    loader = DataLoader(
+        dataset,
+        batch_size=BATCH_SIZE,
+        shuffle=False
+    )
+    criteria = nn.CrossEntropyLoss(label_smoothing=LABEL_SMOOTHING)
     network = get_network(ARCH_NAME)
+    optimizer = optim.AdamW(network.parameters())
+    scheduler = optim.lr_scheduler.StepLR(optimizer, EPOCH_PER_CYCLE)
+    curr_epoch, step = 0, 0
+
+    # train
+    epochbar = \
+        tqdm(range(curr_epoch, NUM_EPOCH), initial=curr_epoch, total=NUM_EPOCH)
+    for i_epoch in epochbar:
+        # main training loop
+        batchbar = tqdm(loader, leave=True)
+        for imgs, labels in batchbar:
+            logits = network(imgs)
+            pred_labels = logits.argmax(dim=1)
+            loss = criteria(logits, labels)
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
+            BOARD.add_scalar('Loss/train', loss.item(), step)
+            step += 1
+            batchbar.set_postfix({
+                'loss': f'{loss:.03f}',
+                'acc': f'{100 * (pred_labels == labels).float().mean():.01f}'
+            })
+            batchbar.close()
+            break
+        scheduler.step()
 
     # training teardown - make analysis products and write ONNX weights
     export_network(network, OUTPUT_DIR / 'final.onnx')
+    print('DONE!')
