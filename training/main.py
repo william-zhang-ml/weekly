@@ -2,6 +2,8 @@
 from datetime import datetime
 import os
 from pathlib import Path
+from mlxtend.evaluate import confusion_matrix
+from mlxtend.plotting import plot_confusion_matrix
 import torch
 from torch import nn, optim
 from torch.utils.data import DataLoader
@@ -48,6 +50,21 @@ def export_network(to_export: nn.Module, path: str) -> None:
             }
         }
     )
+
+
+def export_confmat_fig(net: nn.Module, data: DataLoader, path: str) -> None:
+    """Export single-batch confusion matrix graphic.
+
+    Args:
+        net (nn.Module): network to infer with
+        data (DataLoader): batch generator
+        path (str): file path to write to
+    """
+    imgs, truth = next(iter(data))
+    pred = net(imgs).argmax(dim=1)
+    confmat = confusion_matrix(truth, pred)
+    fig, _ = plot_confusion_matrix(confmat, figsize=(8, 8))
+    fig.savefig(path)
 
 
 if __name__ == '__main__':
@@ -101,8 +118,8 @@ if __name__ == '__main__':
     for i_epoch in epochbar:
         # main training loop
         batchbar = tqdm(loader, leave=True)
-        for imgs, labels in batchbar:
-            logits = network(imgs)
+        for images, labels in batchbar:
+            logits = network(images)
             pred_labels = logits.argmax(dim=1)
             loss = criteria(logits, labels)
             optimizer.zero_grad()
@@ -132,4 +149,5 @@ if __name__ == '__main__':
 
     # training teardown - make analysis products and write ONNX weights
     export_network(network, OUTPUT_DIR / 'final.onnx')
+    export_confmat_fig(network, loader, OUTPUT_DIR / 'confusion-matrix.jpg')
     print('DONE!')
