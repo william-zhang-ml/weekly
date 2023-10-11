@@ -1,6 +1,7 @@
 """ Example training script. """
 from datetime import datetime
 import os
+import sys
 from pathlib import Path
 from mlxtend.evaluate import confusion_matrix
 from mlxtend.plotting import plot_confusion_matrix
@@ -71,12 +72,13 @@ if __name__ == '__main__':
     # get ready to write new experiment outputs
     TAG = datetime.now().strftime('%Y%m%d-%H%M%S')
     OUTPUT_DIR = Path('./outputs/') / TAG
-    os.makedirs(OUTPUT_DIR)
+    CHECKPOINT_DIR = OUTPUT_DIR / 'checkpoints'
+    os.makedirs(CHECKPOINT_DIR)
     BOARD = SummaryWriter(log_dir=f'_tensorboard/{TAG}')
 
-    with open('./configs/dev.yaml', 'r', encoding='utf-8') as file:
+    with open(sys.argv[1], 'r', encoding='utf-8') as file:
         CONFIG = yaml.safe_load(file)
-    with open(OUTPUT_DIR / 'config.yml', 'w', encoding='utf-8') as file:
+    with open(OUTPUT_DIR / 'config.yaml', 'w', encoding='utf-8') as file:
         yaml.safe_dump(CONFIG, file)
 
     # extract required config values
@@ -144,7 +146,7 @@ if __name__ == '__main__':
                 'optimizer': optimizer.state_dict(),
                 'scheduler': scheduler.state_dict()
             },
-            OUTPUT_DIR / f'{i_epoch + 1:03d}.pt'
+            CHECKPOINT_DIR / f'{i_epoch + 1:03d}.pt'
         )
 
     # training teardown - make analysis products and write ONNX weights
