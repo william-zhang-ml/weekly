@@ -1,8 +1,6 @@
 """ Example training script. """
-from datetime import datetime
 import os
 import sys
-from pathlib import Path
 from mlxtend.evaluate import confusion_matrix
 from mlxtend.plotting import plot_confusion_matrix
 import torch
@@ -13,6 +11,7 @@ from torchvision import models, transforms
 from torchvision.datasets import MNIST
 from tqdm import tqdm
 import yaml
+from outputs import Output
 
 
 def get_network(arch_name: str) -> nn.Module:
@@ -69,17 +68,31 @@ def export_confmat_fig(net: nn.Module, data: DataLoader, path: str) -> None:
 
 
 if __name__ == '__main__':
-    # get ready to write new experiment outputs
-    TAG = datetime.now().strftime('%Y%m%d-%H%M%S')
-    OUTPUT_DIR = Path('./outputs/') / TAG
-    CHECKPOINT_DIR = OUTPUT_DIR / 'checkpoints'
-    os.makedirs(CHECKPOINT_DIR)
-    BOARD = SummaryWriter(log_dir=f'_tensorboard/{TAG}')
-
-    with open(sys.argv[1], 'r', encoding='utf-8') as file:
-        CONFIG = yaml.safe_load(file)
-    with open(OUTPUT_DIR / 'config.yaml', 'w', encoding='utf-8') as file:
-        yaml.safe_dump(CONFIG, file)
+    # set up a new experiment or continue from existing checkpoint
+    try:
+        if os.path.isfile(sys.argv[1]):
+            # new experiment
+            OUTPUT = Output('outputs')
+            CHECKPOINT = None
+            with open(sys.argv[1], 'r', encoding='utf-8') as file:
+                CONFIG = yaml.safe_load(file)
+            with open(OUTPUT.output_dir / 'config.yaml', 'w', encoding='utf-8') as file:
+                yaml.safe_dump(CONFIG, file)
+            BOARD = SummaryWriter(log_dir=f'_tensorboard/{OUTPUT.tag}')
+        elif os.path.isdir(sys.argv[1]):
+            # contimue checkpoint
+            root, tag = sys.argv[1].split('/')
+            OUTPUT = Output(root, tag)
+            CHECKPOINT = OUTPUT.get_latest_checkpoint()
+            with open(OUTPUT.output_dir / 'config.yaml', 'r', encoding='utf-8') as file:
+                CONFIG = yaml.safe_load(file)
+            BOARD = SummaryWriter(log_dir=f'_tensorboard/{OUTPUT.tag}')
+        else:
+            raise FileNotFoundError()
+    except IndexError as exc:
+        raise IndexError('Must provide config file or existing output dir.') from exc
+    except FileNotFoundError as exc:
+        raise FileNotFoundError() from exc
 
     # extract required config values
     ARCH_NAME = CONFIG['arch_name']
@@ -88,9 +101,6 @@ if __name__ == '__main__':
     LABEL_SMOOTHING = CONFIG['label_smoothing']
     MNIST_PATH = CONFIG['mnist_path']
     NUM_EPOCH = CONFIG['num_epoch']
-
-    # extract optional config values
-    CHECKPOINT = CONFIG['checkpoint'] if 'checkpoint' in CONFIG else None
 
     # initialize training variables
     dataset = MNIST(MNIST_PATH, transform=transforms.ToTensor())
@@ -105,14 +115,13 @@ if __name__ == '__main__':
     scheduler = optim.lr_scheduler.StepLR(optimizer, EPOCH_PER_CYCLE)
     curr_epoch, step = 0, 0
 
-    # load checkpoint and overwrite states
+    # load checkpoint states into training variables
     if CHECKPOINT is not None:
-        checkpoint = torch.load(CHECKPOINT)
-        network.load_state_dict(checkpoint['model'])
-        optimizer.load_state_dict(checkpoint['optimizer'])
-        scheduler.load_state_dict(checkpoint['scheduler'])
-        curr_epoch = checkpoint['epoch'] + 1
-        step = checkpoint['step'] + 1
+        network.load_state_dict(CHECKPOINT['model'])
+        optimizer.load_state_dict(CHECKPOINT['optimizer'])
+        scheduler.load_state_dict(CHECKPOINT['scheduler'])
+        curr_epoch = CHECKPOINT['epoch']
+        step = CHECKPOINT['step']
 
     # train
     epochbar = \
@@ -140,16 +149,16 @@ if __name__ == '__main__':
         # save checkpoint
         torch.save(
             {
-                'epoch': i_epoch,
+                'epoch': i_epoch + 1,
                 'step': step,
                 'model': network.state_dict(),
                 'optimizer': optimizer.state_dict(),
                 'scheduler': scheduler.state_dict()
             },
-            CHECKPOINT_DIR / f'{i_epoch + 1:03d}.pt'
+            OUTPUT.checkpoint_dir / f'{i_epoch + 1:03d}.pt'
         )
 
     # training teardown - make analysis products and write ONNX weights
-    export_network(network, OUTPUT_DIR / 'final.onnx')
-    export_confmat_fig(network, loader, OUTPUT_DIR / 'confusion-matrix.jpg')
+    export_network(network, OUTPUT.output_dir / 'final.onnx')
+    export_confmat_fig(network, loader, OUTPUT.output_dir / 'confusion-matrix.jpg')
     print('DONE!')
