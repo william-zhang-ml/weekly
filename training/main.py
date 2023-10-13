@@ -6,6 +6,7 @@ from mlxtend.plotting import plot_confusion_matrix
 import torch
 from torch import nn, optim
 from torch.utils.data import DataLoader
+from torch.utils.data.dataloader import default_collate
 from torch.utils.tensorboard import SummaryWriter
 from torchvision import models, transforms
 from torchvision.datasets import MNIST
@@ -62,7 +63,7 @@ def export_confmat_fig(net: nn.Module, data: DataLoader, path: str) -> None:
     """
     imgs, truth = next(iter(data))
     pred = net(imgs).argmax(dim=1)
-    confmat = confusion_matrix(truth, pred)
+    confmat = confusion_matrix(truth.cpu().numpy(), pred.cpu().numpy())
     fig, _ = plot_confusion_matrix(confmat, figsize=(8, 8))
     fig.savefig(path)
 
@@ -97,6 +98,7 @@ if __name__ == '__main__':
     # extract required config values
     ARCH_NAME = CONFIG['arch_name']
     BATCH_SIZE = CONFIG['batch_size']
+    DEVICE = CONFIG['device']
     EPOCH_PER_CYCLE = CONFIG['epoch_per_cycle']
     LABEL_SMOOTHING = CONFIG['label_smoothing']
     MNIST_PATH = CONFIG['mnist_path']
@@ -107,10 +109,13 @@ if __name__ == '__main__':
     loader = DataLoader(
         dataset,
         batch_size=BATCH_SIZE,
+        collate_fn=lambda items: tuple(
+            elem.to(DEVICE) for elem in default_collate(items)
+        ),
         shuffle=False
     )
     criteria = nn.CrossEntropyLoss(label_smoothing=LABEL_SMOOTHING)
-    network = get_network(ARCH_NAME)
+    network = get_network(ARCH_NAME).to(DEVICE)
     optimizer = optim.AdamW(network.parameters())
     scheduler = optim.lr_scheduler.StepLR(optimizer, EPOCH_PER_CYCLE)
     curr_epoch, step = 0, 0
@@ -128,7 +133,7 @@ if __name__ == '__main__':
         tqdm(range(curr_epoch, NUM_EPOCH), initial=curr_epoch, total=NUM_EPOCH)
     for i_epoch in epochbar:
         # main training loop
-        batchbar = tqdm(loader, leave=True)
+        batchbar = tqdm(loader, leave=False)
         for images, labels in batchbar:
             logits = network(images)
             pred_labels = logits.argmax(dim=1)
@@ -142,8 +147,6 @@ if __name__ == '__main__':
                 'loss': f'{loss:.03f}',
                 'acc': f'{100 * (pred_labels == labels).float().mean():.01f}'
             })
-            batchbar.close()
-            break
         scheduler.step()
 
         # save checkpoint
@@ -159,6 +162,6 @@ if __name__ == '__main__':
         )
 
     # training teardown - make analysis products and write ONNX weights
-    export_network(network, OUTPUT.output_dir / 'final.onnx')
     export_confmat_fig(network, loader, OUTPUT.output_dir / 'confusion-matrix.jpg')
+    export_network(network.cpu(), OUTPUT.output_dir / 'final.onnx')
     print('DONE!')
