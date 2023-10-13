@@ -41,6 +41,40 @@ def assert_siso_onnx_output_same(
         torch.testing.assert_allclose(model_outp, onnx_outp)
 
 
+def export_siso_cnn(model: nn.Module,
+                    example_input: torch.Tensor = None,
+                    path: str = None) -> None:
+    """Export single input, single output convnet to ONNX file (dynamic axes).
+
+    Args:
+        model (nn.Module): convnet to export
+        example_input (torch.Tensor): example input
+        path (str): where to write ONNX file
+    """
+    if example_input is None:
+        example_input = torch.rand(1, 3, 256, 256)
+
+    if path is None:
+        path = 'model.onnx'
+    elif path[:-5] != '.onnx':
+        path = path + '.onnx'
+
+    torch.onnx.export(
+        model=model,
+        args=example_input,
+        f=path,
+        input_names=['input'],
+        output_names=['output'],
+        dynamic_axes={
+            'input': {
+                0: 'batch-dim',
+                2: 'row',
+                3: 'col'
+            }
+        }
+    )
+
+
 class OnnxEngine:
     """Wrapper class for using onnxruntime.InferenceSession. """
     def __init__(self, path: str) -> None:
