@@ -25,6 +25,11 @@ class Output:
         """Where training checkpoints should go. """
         return self.output_dir / 'checkpoints'
 
+    @property
+    def config_path(self) -> Path:
+        """Where copy of config file should go. """
+        return self.output_dir / 'config.yaml'
+
     def get_checkpoint(self, epoch: int = None) -> dict:
         """Load the latest checkpoint (curr alphabetically).
 
