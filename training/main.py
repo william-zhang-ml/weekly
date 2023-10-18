@@ -122,7 +122,7 @@ if __name__ == '__main__':
 
     # load checkpoint states into training variables
     if CHECKPOINT is not None:
-        network.load_state_dict(CHECKPOINT['model'])
+        network.load_state_dict(CHECKPOINT['network'])
         optimizer.load_state_dict(CHECKPOINT['optimizer'])
         scheduler.load_state_dict(CHECKPOINT['scheduler'])
         curr_epoch = CHECKPOINT['epoch']
@@ -154,7 +154,7 @@ if __name__ == '__main__':
             {
                 'epoch': i_epoch + 1,
                 'step': step,
-                'model': network.state_dict(),
+                'network': network.state_dict(),
                 'optimizer': optimizer.state_dict(),
                 'scheduler': scheduler.state_dict()
             },
