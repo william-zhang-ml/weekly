@@ -77,7 +77,7 @@ if __name__ == '__main__':
             CHECKPOINT = None
             with open(sys.argv[1], 'r', encoding='utf-8') as file:
                 CONFIG = yaml.safe_load(file)
-            with open(OUTPUT.output_dir / 'config.yaml', 'w', encoding='utf-8') as file:
+            with open(OUTPUT.config_path, 'w', encoding='utf-8') as file:
                 yaml.safe_dump(CONFIG, file)
             BOARD = SummaryWriter(log_dir=f'_tensorboard/{OUTPUT.tag}')
         elif os.path.isdir(sys.argv[1]):
@@ -85,13 +85,13 @@ if __name__ == '__main__':
             root, tag = sys.argv[1].split('/')
             OUTPUT = Output(root, tag)
             CHECKPOINT = OUTPUT.get_checkpoint()
-            with open(OUTPUT.output_dir / 'config.yaml', 'r', encoding='utf-8') as file:
+            with open(OUTPUT.config_path, 'r', encoding='utf-8') as file:
                 CONFIG = yaml.safe_load(file)
             BOARD = SummaryWriter(log_dir=f'_tensorboard/{OUTPUT.tag}')
         else:
             raise FileNotFoundError()
     except IndexError as exc:
-        raise IndexError('Must provide config file or existing output dir.') from exc
+        raise IndexError('Provide config file or output dir.') from exc
     except FileNotFoundError as exc:
         raise FileNotFoundError() from exc
 
