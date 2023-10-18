@@ -84,7 +84,7 @@ if __name__ == '__main__':
             # contimue checkpoint
             root, tag = sys.argv[1].split('/')
             OUTPUT = Output(root, tag)
-            CHECKPOINT = OUTPUT.get_latest_checkpoint()
+            CHECKPOINT = OUTPUT.get_checkpoint()
             with open(OUTPUT.output_dir / 'config.yaml', 'r', encoding='utf-8') as file:
                 CONFIG = yaml.safe_load(file)
             BOARD = SummaryWriter(log_dir=f'_tensorboard/{OUTPUT.tag}')
