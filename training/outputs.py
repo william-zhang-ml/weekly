@@ -25,11 +25,20 @@ class Output:
         """Where training checkpoints should go. """
         return self.output_dir / 'checkpoints'
 
-    def get_latest_checkpoint(self) -> dict:
+    @property
+    def config_path(self) -> Path:
+        """Where copy of config file should go. """
+        return self.output_dir / 'config.yaml'
+
+    def get_checkpoint(self, epoch: int = None) -> dict:
         """Load the latest checkpoint (curr alphabetically).
 
         Returns:
             dict: checkpoint variables and state dicts
         """
-        checkpoints = sorted(self.checkpoint_dir.glob('*.pt'))
-        return torch.load(checkpoints[-1])
+        if epoch is None:
+            # get latest by default
+            checkpoint_file = sorted(self.checkpoint_dir.glob('*.pt'))[-1]
+        else:
+            checkpoint_file = self.checkpoint_dir / f'{epoch:03d}.pt'
+        return torch.load(checkpoint_file)
