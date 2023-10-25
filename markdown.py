@@ -30,7 +30,7 @@ def table_to_markdown(table: List[List[str]]) -> str:
     """
     # compute needed width of each column
     col_width: List[int] = [
-        max([len(elem) for elem in col]) for col in zip(*table)
+        max(len(elem) for elem in col) for col in zip(*table)
     ]
 
     # start by writing header row

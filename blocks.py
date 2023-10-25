@@ -28,6 +28,7 @@ class ModuleMixin:
 
 class Block(nn.Sequential, ModuleMixin):
     """General purpose block of layers where some args are inferred. """
+    # pylint: disable=too-many-arguments
     def __init__(self,
                  layers: List[str],
                  in_channels: int,
@@ -56,6 +57,7 @@ class Block(nn.Sequential, ModuleMixin):
                 self.add_module(str(i_layer), nn.Dropout(dropout))
             elif layer_str == 'R':
                 self.add_module(str(i_layer), nn.ReLU())
+    # pylint: enable=too-many-arguments
 
 
 class AdaptiveHybridPool2d(nn.Module):

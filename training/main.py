@@ -162,6 +162,6 @@ if __name__ == '__main__':
         )
 
     # training teardown - make analysis products and write ONNX weights
-    export_confmat_fig(network, loader, OUTPUT.output_dir / 'confusion-matrix.jpg')
+    export_confmat_fig(network, loader, OUTPUT.output_dir / 'confmat.jpg')
     export_network(network.cpu(), OUTPUT.output_dir / 'final.onnx')
     print('DONE!')
