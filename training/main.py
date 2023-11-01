@@ -13,6 +13,7 @@ from torchvision.datasets import MNIST
 from tqdm import tqdm
 import yaml
 from outputs import Output
+import utils
 
 
 def get_network(arch_name: str) -> nn.Module:
@@ -77,16 +78,18 @@ if __name__ == '__main__':
             CHECKPOINT = None
             with open(sys.argv[1], 'r', encoding='utf-8') as file:
                 CONFIG = yaml.safe_load(file)
+            CONFIG['repo'] = utils.get_hash()
             with open(OUTPUT.config_path, 'w', encoding='utf-8') as file:
                 yaml.safe_dump(CONFIG, file)
             BOARD = SummaryWriter(log_dir=f'_tensorboard/{OUTPUT.tag}')
         elif os.path.isdir(sys.argv[1]):
-            # contimue checkpoint
+            # continue checkpoint
             root, tag = sys.argv[1].split('/')
             OUTPUT = Output(root, tag)
             CHECKPOINT = OUTPUT.get_checkpoint()
             with open(OUTPUT.config_path, 'r', encoding='utf-8') as file:
                 CONFIG = yaml.safe_load(file)
+            assert CONFIG['repo'] == utils.get_hash()
             BOARD = SummaryWriter(log_dir=f'_tensorboard/{OUTPUT.tag}')
         else:
             raise FileNotFoundError()
