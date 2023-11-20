@@ -78,7 +78,15 @@ if __name__ == '__main__':
             CHECKPOINT = None
             with open(sys.argv[1], 'r', encoding='utf-8') as file:
                 CONFIG = yaml.safe_load(file)
-            CONFIG['repo'] = utils.get_hash()
+
+            # overwrite hyperparameters (useful for search)
+            try:
+                CONFIG.update(
+                    utils.get_hyperparameters(sys.argv[2], int(sys.argv[3]))
+                )
+            except FileNotFoundError:
+                pass
+            CONFIG['repo'] = utils.get_repo_hash()
             with open(OUTPUT.config_path, 'w', encoding='utf-8') as file:
                 yaml.safe_dump(CONFIG, file)
             BOARD = SummaryWriter(log_dir=f'_tensorboard/{OUTPUT.tag}')
