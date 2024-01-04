@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <style>
+        body {
+            font-family: "Courier New", "Sans-Serif";
+            font-size: 18pt;
+        }
+        section {
+            width: 100%;
+            display: flex;
+            justify-content: flex-start;
+            margin-top: 1em;
+            margin-bottom: 1em;
+        }
+        section > div {
+            padding: 1em;
+        }
+        #images {
+            border: 1px solid black;
+            display: block;
+        }
+        #images > div {
+            margin-bottom: 0.5em;
+        }
+        #images > div:last-of-type {
+            margin-bottom: 0em;
+        }
+        img {
+            border: 1px solid black;
+            max-width: 100%;
+            height: auto;
+        }
+        table, th, td {
+            border: 1px solid black;
+            border-collapse: collapse;
+        }
+        th, td {
+            padding: 10px;
+        }
+    </style>
+</head>
+<body>
+    <section>
+        <div id="images">
+            {% for figure_path in figures %}
+            <div><img src={{ figure_path }}></div>
+            {% endfor %}
+        </div>
+        <div>
+            <table>
+                <tr>
+                    <th>Metric</th>
+                    <th>Value</th>
+                </tr>
+                {% for name, value in metrics.items() %}
+                <tr>
+                    <td>{{ name }}</td>
+                    <td>{{ value }}</td>
+                </tr>
+                {% endfor %}
+            </table>
+        </div>
+    </section>
+</html>
