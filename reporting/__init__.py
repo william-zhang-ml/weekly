@@ -34,14 +34,15 @@ class Report:
         self._figures.append(imgname)
         return str(self._report_path / imgname)
 
-    def log_metric(self, name: str, value: float) -> None:
+    def log_metric(self, name: str, value: float, fmt: str = '.03f') -> None:
         """Internally track a new metric to add to the report.
 
         Args:
             name (str): name of the metric (F1-score for example)
             value (float): metric value to report
+            fmt (str): f-string format for <value>
         """
-        self._metrics.update({name: value})
+        self._metrics.update({name: f'{float(value): {fmt}}'})
 
     def fill_template(self) -> str:
         """Put tracked image paths & metrics into report template. """
