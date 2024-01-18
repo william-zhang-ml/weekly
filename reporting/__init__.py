@@ -12,12 +12,14 @@ with open(_MY_DIR / 'mpl_style.yaml', mode='r', encoding='utf-8') as file:
 
 class Report:
     """Utility class to build HTML reports with figures and metric tables. """
-    def __init__(self, report_path: str) -> None:
+    def __init__(self, report_path: str, tag: str = None) -> None:
         """
         Args:
-            report_path (str): directory in which to write report and images
+            report_path (str): new directory in which to write report/images
+            tag (str): report tag to use as tab title
         """
         self._report_path = Path(report_path)
+        self._tag = tag
         os.makedirs(report_path)
         self._figures = []
         self._metrics = {}
@@ -50,7 +52,8 @@ class Report:
         template = environment.get_template('template.html')
         content = template.render(
             figures=self._figures,
-            metrics=self._metrics
+            metrics=self._metrics,
+            tag=self._tag
         )
         return content
 
